@@ -1,0 +1,10 @@
+# Render 一键部署配置。
+# 在 Render 新建 Blueprint 或 Web Service 时会自动读取本文件。
+services:
+  - type: web
+    name: med-study-site
+    runtime: node
+    plan: free
+    buildCommand: "echo no build needed"
+    startCommand: npm start
+    autoDeploy: true

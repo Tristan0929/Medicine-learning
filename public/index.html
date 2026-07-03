@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>医学复习助手</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">✚</span>
+      <span class="brand-name">医学复习助手</span>
+    </div>
+    <nav class="tabs">
+      <button class="tab active" data-tab="notes">教材梳理</button>
+      <button class="tab" data-tab="exam">真题模拟</button>
+      <button class="tab" data-tab="qa">AI 问答</button>
+      <button class="tab" data-tab="cards">闪卡</button>
+      <button class="tab" data-tab="glossary">术语表</button>
+      <button class="tab" data-tab="settings">设置</button>
+    </nav>
+    <div class="status-chip" id="modelChip" title="当前使用的模型">未配置</div>
+  </header>
+
+  <main class="content">
+
+    <!-- ===================== 教材梳理 ===================== -->
+    <section class="panel active" id="tab-notes">
+      <div class="panel-head">
+        <h2>教材梳理</h2>
+        <p class="hint">贴入文字版教材，AI 帮你提炼重点、给出记忆方法。</p>
+      </div>
+      <textarea id="notesInput" class="big-input" placeholder="在这里粘贴教材内容……"></textarea>
+      <div class="toolbar">
+        <label class="checkbox">
+          <input type="checkbox" id="notesEnglish" />
+          <span>附上英文名词归纳、提炼与分析</span>
+        </label>
+        <button class="btn primary" id="notesRun">生成笔记</button>
+        <button class="btn" id="notesExport" disabled>导出 PDF</button>
+      </div>
+      <div class="output card-surface" id="notesOutput">
+        <p class="placeholder">生成的笔记会显示在这里。</p>
+      </div>
+      <div class="toolbar" id="notesActions" style="display:none">
+        <button class="btn ghost" id="notesToCards">把要点做成闪卡</button>
+        <button class="btn ghost" id="notesToGlossary">把英文名词加入术语表</button>
+      </div>
+    </section>
+
+    <!-- ===================== 真题模拟 ===================== -->
+    <section class="panel" id="tab-exam">
+      <div class="panel-head">
+        <h2>真题模拟</h2>
+        <p class="hint">贴入历年真题，AI 分析出题规律并生成预测模拟题。</p>
+      </div>
+      <textarea id="examInput" class="big-input" placeholder="在这里粘贴历年真题（可含答案）……"></textarea>
+      <div class="toolbar">
+        <label class="field">题量
+          <select id="examCount">
+            <option value="5">5 题</option>
+            <option value="10" selected>10 题</option>
+            <option value="15">15 题</option>
+            <option value="20">20 题</option>
+          </select>
+        </label>
+        <label class="field">难度
+          <select id="examLevel">
+            <option value="基础">基础</option>
+            <option value="适中" selected>适中</option>
+            <option value="偏难">偏难</option>
+          </select>
+        </label>
+        <label class="field">题型
+          <select id="examType">
+            <option value="综合" selected>综合</option>
+            <option value="单选题">单选题</option>
+            <option value="多选题">多选题</option>
+            <option value="名词解释">名词解释</option>
+            <option value="简答题">简答题</option>
+            <option value="病例分析">病例分析</option>
+          </select>
+        </label>
+        <button class="btn primary" id="examRun">分析并生成模拟题</button>
+        <button class="btn" id="examExport" disabled>导出 PDF</button>
+      </div>
+      <div class="output card-surface" id="examOutput">
+        <p class="placeholder">出题规律分析与模拟题会显示在这里。</p>
+      </div>
+    </section>
+
+    <!-- ===================== AI 问答 ===================== -->
+    <section class="panel" id="tab-qa">
+      <div class="panel-head">
+        <h2>AI 问答助手</h2>
+        <p class="hint">粘贴内容点「排版整理」，然后<strong>选中任意文字即可就地提问</strong>；也可在下方直接提问。</p>
+      </div>
+      <textarea id="qaInput" class="mid-input" placeholder="粘贴要整理/学习的文字内容……"></textarea>
+      <div class="toolbar">
+        <button class="btn primary" id="qaFormat">排版整理</button>
+        <button class="btn" id="qaExport" disabled>导出 PDF</button>
+      </div>
+      <div class="output card-surface selectable" id="qaContent">
+        <p class="placeholder">整理后的内容会显示在这里，选中文字会弹出提问按钮。</p>
+      </div>
+
+      <div class="qa-log" id="qaLog"></div>
+
+      <div class="qa-ask-bar">
+        <input type="text" id="qaAskInput" class="ask-input" placeholder="直接输入你的问题……" />
+        <button class="btn primary" id="qaAsk">提问</button>
+      </div>
+    </section>
+
+    <!-- ===================== 闪卡 ===================== -->
+    <section class="panel" id="tab-cards">
+      <div class="panel-head">
+        <h2>智能闪卡</h2>
+        <p class="hint">间隔重复算法安排复习。今天该背的会自动排到前面。</p>
+      </div>
+      <div class="toolbar">
+        <span class="pill" id="cardsDue">待复习 0</span>
+        <span class="pill">总计 <span id="cardsTotal">0</span></span>
+        <button class="btn primary" id="cardsStart">开始复习</button>
+        <button class="btn ghost" id="cardsAdd">手动添加</button>
+        <button class="btn" id="cardsExport" disabled>导出 PDF</button>
+      </div>
+
+      <div class="review-area" id="reviewArea" style="display:none">
+        <div class="flashcard" id="flashcard">
+          <div class="flashcard-inner">
+            <div class="flashcard-face front" id="cardFront"></div>
+            <div class="flashcard-face back" id="cardBack"></div>
+          </div>
+        </div>
+        <div class="review-controls" id="reviewControls">
+          <button class="btn" id="cardFlip">翻卡</button>
+        </div>
+        <div class="grade-controls" id="gradeControls" style="display:none">
+          <button class="btn grade-hard" data-grade="0">忘记</button>
+          <button class="btn grade-mid" data-grade="3">模糊</button>
+          <button class="btn grade-easy" data-grade="5">认识</button>
+        </div>
+      </div>
+
+      <div class="card-list card-surface" id="cardList">
+        <p class="placeholder">还没有闪卡。可在「教材梳理」里一键生成，或手动添加。</p>
+      </div>
+    </section>
+
+    <!-- ===================== 术语表 ===================== -->
+    <section class="panel" id="tab-glossary">
+      <div class="panel-head">
+        <h2>术语表</h2>
+        <p class="hint">英文名词对照，可搜索、可单独导出。</p>
+      </div>
+      <div class="toolbar">
+        <input type="text" id="glossarySearch" class="ask-input" placeholder="搜索英文 / 中文……" />
+        <button class="btn ghost" id="glossaryAdd">手动添加</button>
+        <button class="btn" id="glossaryExport" disabled>导出 PDF</button>
+      </div>
+      <div class="output card-surface" id="glossaryTableWrap">
+        <p class="placeholder">还没有术语。可在「教材梳理」勾选英文分析后一键导入。</p>
+      </div>
+    </section>
+
+    <!-- ===================== 设置 ===================== -->
+    <section class="panel" id="tab-settings">
+      <div class="panel-head">
+        <h2>设置</h2>
+        <p class="hint">选择服务商 → 填入你自己的 Key → 填写模型名。所有信息只保存在你本机浏览器，不上传。</p>
+      </div>
+
+      <div class="settings-grid">
+        <label class="field-block">服务商
+          <select id="provider">
+            <option value="deepseek" selected>DeepSeek（推荐）</option>
+            <option value="openai">OpenAI</option>
+            <option value="moonshot">Kimi / Moonshot</option>
+            <option value="zhipu">智谱 GLM</option>
+            <option value="custom">自定义（任意 OpenAI 兼容接口）</option>
+          </select>
+          <small class="tip">默认 DeepSeek。也可选其他 OpenAI 兼容服务商或自定义。</small>
+        </label>
+
+        <label class="field-block">接口地址 Base URL
+          <input type="text" id="baseUrl" placeholder="https://api.deepseek.com" />
+          <small class="tip">选好服务商会自动填好；「自定义」时手动填写。</small>
+        </label>
+
+        <label class="field-block">API Key
+          <input type="password" id="apiKey" placeholder="sk-..." autocomplete="off" />
+          <small class="tip">在服务商后台申请。DeepSeek：platform.deepseek.com/api_keys。只存本机。</small>
+        </label>
+
+        <label class="field-block">模型
+          <input type="text" id="model" placeholder="deepseek-v4-flash" />
+          <small class="tip">DeepSeek 可选：deepseek-v4-flash（便宜快，默认）、deepseek-v4-pro（更强）。</small>
+        </label>
+      </div>
+
+      <div class="toolbar">
+        <button class="btn primary" id="saveSettings">保存设置</button>
+        <button class="btn ghost" id="testSettings">测试连接</button>
+        <span id="settingsStatus" class="settings-status"></span>
+      </div>
+
+      <div class="danger-zone">
+        <button class="btn ghost" id="clearAll">清空本机所有数据（Key / 闪卡 / 术语）</button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 选中文字后的浮动提问按钮 -->
+  <button id="selectionAskBtn" class="selection-ask-btn" style="display:none">💬 就这段提问</button>
+
+  <!-- 简易弹窗 -->
+  <div class="modal-mask" id="modalMask" style="display:none">
+    <div class="modal">
+      <h3 id="modalTitle">提问</h3>
+      <div id="modalBody"></div>
+      <div class="modal-actions">
+        <button class="btn ghost" id="modalCancel">取消</button>
+        <button class="btn primary" id="modalOk">确定</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <!-- 第三方库：Markdown 渲染 + PDF 导出 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

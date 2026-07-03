@@ -1,0 +1,13 @@
+{
+  "name": "med-study-site",
+  "version": "1.0.0",
+  "description": "医学复习网站 - 教材梳理 / 真题模拟 / AI问答 / 闪卡 / 术语表，支持多家 AI 服务商（OpenAI 兼容）",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
