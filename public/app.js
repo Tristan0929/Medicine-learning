@@ -269,7 +269,7 @@
       generateCardsFrom($('#notesInput').value.trim()));
 
     $('#notesToGlossary').addEventListener('click', () =>
-      importGlossaryFromNotes($('#notesOutput').innerText));
+      importGlossaryFromNotes($('#notesOutput')));
   }
 
   /* ======================================================================
@@ -631,26 +631,33 @@
   }
 
   // 从笔记正文里解析「英文名词」表格
-  function importGlossaryFromNotes(text) {
-    // 优先解析表格行： |英文|中文|说明|
-    const lines = (text || '').split('\n');
+  function importGlossaryFromNotes(container) {
+    // 直接读取渲染后的 HTML 表格单元格（笔记里的「英文名词」表已变成 <table>）
+    const tables = Array.from(container.querySelectorAll('table'));
+    if (!tables.length) return toast('没找到英文名词表格，请确认已勾选英文分析并生成');
+
+    // 优先取表头含「英文 / English」的表格；找不到则退回全部表格
+    let targets = tables.filter((t) => {
+      const head = t.querySelector('tr');
+      return head && /英文|english/i.test(head.textContent);
+    });
+    if (!targets.length) targets = tables;
+
     const items = [];
-    for (const line of lines) {
-      if (!line.includes('|')) continue;
-      const cells = line.split('|').map((s) => s.trim()).filter((s, i, a) => !(i === 0 && s === '') && !(i === a.length - 1 && s === ''));
-      if (cells.length < 2) continue;
-      const en = cells[0];
-      // 跳过表头与分隔行
-      if (/^[-:\s]+$/.test(en)) continue;
-      if (/^英文$/i.test(en) || /english/i.test(en)) continue;
-      // 英文列应含拉丁字母
-      if (!/[a-zA-Z]/.test(en)) continue;
-      items.push({ en, zh: cells[1] || '', note: cells[2] || '' });
-    }
+    targets.forEach((table) => {
+      table.querySelectorAll('tr').forEach((tr) => {
+        // 只读数据行的 <td>，表头用的是 <th>，天然被跳过
+        const cells = Array.from(tr.querySelectorAll('td')).map((td) => td.textContent.trim());
+        if (cells.length < 2) return;
+        const en = cells[0];
+        if (!/[a-zA-Z]/.test(en)) return; // 英文列须含拉丁字母
+        items.push({ en, zh: cells[1] || '', note: cells[2] || '' });
+      });
+    });
+
     if (!items.length) return toast('没找到英文名词表格，请确认已勾选英文分析并生成');
     addGlossary(items);
-    // 切到术语表
-    $('.tab[data-tab="glossary"]').click();
+    $('.tab[data-tab="glossary"]').click(); // 切到术语表
   }
 
   /* ======================================================================
