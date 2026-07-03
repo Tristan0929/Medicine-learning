@@ -269,7 +269,7 @@
       generateCardsFrom($('#notesInput').value.trim()));
 
     $('#notesToGlossary').addEventListener('click', () =>
-      importGlossaryFromNotes($('#notesOutput')));
+      extractGlossaryFrom($('#notesInput').value.trim()));
   }
 
   /* ======================================================================
@@ -631,33 +631,33 @@
   }
 
   // 从笔记正文里解析「英文名词」表格
-  function importGlossaryFromNotes(container) {
-    // 直接读取渲染后的 HTML 表格单元格（笔记里的「英文名词」表已变成 <table>）
-    const tables = Array.from(container.querySelectorAll('table'));
-    if (!tables.length) return toast('没找到英文名词表格，请确认已勾选英文分析并生成');
-
-    // 优先取表头含「英文 / English」的表格；找不到则退回全部表格
-    let targets = tables.filter((t) => {
-      const head = t.querySelector('tr');
-      return head && /英文|english/i.test(head.textContent);
-    });
-    if (!targets.length) targets = tables;
-
-    const items = [];
-    targets.forEach((table) => {
-      table.querySelectorAll('tr').forEach((tr) => {
-        // 只读数据行的 <td>，表头用的是 <th>，天然被跳过
-        const cells = Array.from(tr.querySelectorAll('td')).map((td) => td.textContent.trim());
-        if (cells.length < 2) return;
-        const en = cells[0];
-        if (!/[a-zA-Z]/.test(en)) return; // 英文列须含拉丁字母
-        items.push({ en, zh: cells[1] || '', note: cells[2] || '' });
-      });
-    });
-
-    if (!items.length) return toast('没找到英文名词表格，请确认已勾选英文分析并生成');
-    addGlossary(items);
-    $('.tab[data-tab="glossary"]').click(); // 切到术语表
+  // 直接从教材原文提取英文名词（不依赖笔记里是否渲染出表格，最稳）
+  async function extractGlossaryFrom(src) {
+    if (!src) return toast('请先在上方粘贴教材内容');
+    if (!ensureConfigured()) return;
+    const btn = $('#notesToGlossary');
+    const label = btn.textContent;
+    btn.disabled = true; btn.textContent = '提取中…';
+    try {
+      const txt = await chat([
+        { role: 'system', content: '你输出严格的 JSON，不要任何多余文字、不要代码块标记。' },
+        { role: 'user', content:
+          '从下面医学内容里提炼所有重要的英文 / 拉丁术语与缩写，做成术语对照。' +
+          '只输出一个 JSON 数组，每个元素形如 {"en":"英文或缩写","zh":"中文含义","note":"简短说明或记忆点"}。' +
+          '若确实没有任何英文术语，就输出 []。\n\n"""\n' + src + '\n"""' },
+      ], { temperature: 0.2 });
+      const arr = extractJson(txt);
+      if (Array.isArray(arr) && arr.length) {
+        addGlossary(arr.filter((x) => x && x.en));
+        $('.tab[data-tab="glossary"]').click(); // 切到术语表
+      } else {
+        toast('这段内容里没找到英文名词');
+      }
+    } catch (err) {
+      toast('提取失败：' + err.message);
+    } finally {
+      btn.disabled = false; btn.textContent = label;
+    }
   }
 
   /* ======================================================================
